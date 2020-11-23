@@ -21,7 +21,7 @@ void get_info() {
 	openFunc(name0);
 
         // очистка массива для перезаписи
-    memset(info.net_int[N], 0, sizeof(info.net_int[N]));    
+    memset(info.net_int[array_size], 0, sizeof(info.net_int[array_size]));    
     
 	while (!feof(fp)){
 		fscanf(fp, "%s", info.net_int[info.count]);
@@ -33,14 +33,14 @@ void get_info() {
 	char name1[] = "/proc/meminfo";
 	openFunc(name1);
 	
-	fgets(info.mem.memTotal, N, fp);
-	fgets(info.mem.memFree, N, fp);
-	fgets(info.mem.memAvail, N, fp);
+	fgets(info.mem.memTotal, array_size, fp);
+	fgets(info.mem.memFree, array_size, fp);
+	fgets(info.mem.memAvail, array_size, fp);
 	fclose(fp);
 /////////////////CPU////////////////////////////
 	char name2[] = "/proc/loadavg";
 	openFunc(name2);
 
-	fgets(info.cpuavg, N, fp);
+	fgets(info.cpuavg, array_size, fp);
 	fclose(fp);
 }

@@ -189,13 +189,16 @@ void *ThreadMainUDP(void *threadArgs)
     echoBuffer[recvMsgSize]='\0';
     printf("Recv: %s\n\n", echoBuffer);
 
+    pthread_mutex_lock(&mutex);
     get_info();         // сбор информации
-    out();              // вывод на экран
 
     /* Send received datagram back to the client */
     if (sendto(clntSock, &info, sizeof(info), 0, (struct sockaddr *) &echoClntAddr, sizeof(echoClntAddr)) != sizeof(info))
         DieWithError("sendto() sent a different number of bytes than expected");
+    pthread_mutex_unlock(&mutex);
+
     printf("\n\n");
+    out();              // вывод на экран
 
     return (NULL);
 }
