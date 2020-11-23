@@ -62,11 +62,11 @@ void TCPWay(){
             /* Create client thread */
             if (pthread_create(&threadID[i], NULL, ThreadMainTCP, (void *) threadArgs) != 0)
                 DieWithError("pthread_create() failed");
-            else { 
-                /* Guarantees that thread resources are deallocated upon return */
-                pthread_detach(pthread_self());  
+            
+            if(pthread_join(threadID[i], NULL) != 0) {
+                perror("Joining the second thread");
+                exit(-1);
             }
-            // printf("with thread %ld\n", (long int) threadID);
         }
     }
 }
@@ -99,12 +99,14 @@ void UDPWay(){
 
             if (pthread_create(&threadID[i], NULL, ThreadMainUDP, (void *) threadArgs) != 0)
                 DieWithError("pthread_create() failed");
-            // printf("with thread %ld\n", (long int) threadID);
-
+            // else{
+            //     pthread_detach(pthread_self());
+            // }
             if(pthread_join(threadID[i], NULL) != 0) {
                 perror("Joining the second thread");
                 exit(-1);
             }
+            // printf("with thread %ld\n", (long int) threadID);
         }
     }
 }
@@ -164,10 +166,10 @@ void *ThreadMainTCP(void *threadArgs){
 
         pthread_mutex_lock(&mutex);
         get_info();         // сбор информации
-        pthread_mutex_unlock(&mutex);
 
         if (send(clntSock, &info, sizeof(info), 0) != sizeof(info))
             DieWithError("send() sent a different number of bytes than expected");
+        pthread_mutex_unlock(&mutex);
         
         out();              // вывод на экран
         printf("\n\n");
@@ -202,11 +204,11 @@ void *ThreadMainUDP(void *threadArgs){
 
         pthread_mutex_lock(&mutex);
         get_info();         // сбор информации
-        pthread_mutex_unlock(&mutex);
 
         /* Send received datagram back to the client */
         if (sendto(clntSock, &info, sizeof(info), 0, (struct sockaddr *) &echoClntAddr, sizeof(echoClntAddr)) != sizeof(info))
             DieWithError("sendto() sent a different number of bytes than expected");
+        pthread_mutex_unlock(&mutex);
     
         out();              // вывод на экран
         printf("\n\n");
