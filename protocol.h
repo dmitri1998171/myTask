@@ -1,6 +1,6 @@
 
 #define array_size 50
-#define ECHOMAX 20
+#define ECHOMAX 32
 
 int max_clnt, port;
 char *type_proto;

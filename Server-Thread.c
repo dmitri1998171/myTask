@@ -10,16 +10,7 @@
 pthread_t* threadID;
 pthread_mutex_t mutex;
 struct ThreadArgs *threadArgs;          /* Pointer to argument structure for thread */
-
-struct sockaddr_in echoServAddr;        /* Local address */
-struct sockaddr_in echoClntAddr;        /* Client address */
-
 struct info info;
-
-unsigned int cliAddrLen;                /* Length of incoming message */
-
-int recvMsgSize;                        /* Size of received message */
-char echoBuffer[ECHOMAX];               /* Buffer for echo string */
 
 void DieWithError(char *errorMessage);  /* Error handling function */
 void get_info(void);
@@ -27,17 +18,17 @@ void out(void);
 void *ThreadMainTCP(void *arg);         /* Main program of a thread */
 void *ThreadMainUDP(void *arg);         /* Main program of a thread */
 
-/* Structure of arguments to pass to client thread */
-struct ThreadArgs
-{
-    int clntSock;                       /* Socket descriptor for client */
+struct ThreadArgs{
+    int clntSock;
 };
 
 void TCPWay(){
     int sock;                        /* Socket */
     int clntSock;                    /* Socket descriptor for client */
     unsigned int clntLen;            /* Length of client address data structure */
-    
+    struct sockaddr_in echoServAddr;        /* Local address */
+    struct sockaddr_in echoClntAddr;        /* Client address */
+
     /* Create socket for incoming connections */
     if ((sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0)
         DieWithError("socket() failed");
@@ -72,8 +63,8 @@ void TCPWay(){
             if (pthread_create(&threadID[i], NULL, ThreadMainTCP, (void *) threadArgs) != 0)
                 DieWithError("pthread_create() failed");
             else { 
-            /* Guarantees that thread resources are deallocated upon return */
-            pthread_detach(pthread_self());  
+                /* Guarantees that thread resources are deallocated upon return */
+                pthread_detach(pthread_self());  
             }
             // printf("with thread %ld\n", (long int) threadID);
         }
@@ -81,8 +72,10 @@ void TCPWay(){
 }
 
 void UDPWay(){
-    int sock;                        /* Socket */
-    
+    int sock;                               /* Socket */
+    struct sockaddr_in echoServAddr;        /* Local address */
+    struct sockaddr_in echoClntAddr;        /* Client address */
+
     /* Create socket for sending/receiving datagrams */
     if ((sock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0)
         DieWithError("socket() failed");
@@ -116,15 +109,13 @@ void UDPWay(){
     }
 }
 
-int main(int argc, char *argv[])
-{
-    if (argc != 4)     /* Test for correct number of arguments */
-    {
+int main(int argc, char *argv[]){
+    if (argc != 4){     /* Test for correct number of arguments */
         fprintf(stderr, "Usage:  %s <client count> <Server Port> <TCP/UDP>\n", argv[0]);
         exit(1);
     }
 
-    // ==========================
+    // Парсинг и валидация аргументов 
 
     max_clnt = atoi(argv[1]);
     port = atoi(argv[2]);  
@@ -133,7 +124,7 @@ int main(int argc, char *argv[])
     // --------------------------
 
     if(port < 1024 || port > 65535){
-        printf("Invalid port");
+        printf("Invalid port\n");
         exit(1);
     }
     // ==========================
@@ -149,19 +140,21 @@ int main(int argc, char *argv[])
         printf("UDPWay\n"); 
         UDPWay();
         }
-    else { printf("Invalid protocol type!\n"); exit(1); }
+    else { printf("Invalid protocol type\n"); exit(1); }
 }
 
-void *ThreadMainTCP(void *threadArgs)
-{
-    int clntSock;        /* Socket descriptor for client connection */
+void *ThreadMainTCP(void *threadArgs){
+    char echoBuffer[ECHOMAX];
+    unsigned int cliAddrLen;
+    int clntSock;
+    int recvMsgSize;                       
 
     /* Extract socket file descriptor from argument */
     clntSock = ((struct ThreadArgs *) threadArgs) -> clntSock;
     free(threadArgs);              /* Deallocate memory for argument */
 
     /* clntSock is connected to a client! */
-    if ((recvMsgSize = recv(clntSock, echoBuffer, 32, 0)) < 0)
+    if ((recvMsgSize = recv(clntSock, echoBuffer, ECHOMAX, 0)) < 0)
         DieWithError("recv() failed");
 
     // Проверка на получение правильной команды от клиента
@@ -186,10 +179,13 @@ void *ThreadMainTCP(void *threadArgs)
     return (NULL);
 }
 
-void *ThreadMainUDP(void *threadArgs)
-{
+void *ThreadMainUDP(void *threadArgs){
+    char echoBuffer[ECHOMAX];
     int clntSock;        /* Socket descriptor for client connection */
-
+    int recvMsgSize;                       
+    unsigned int cliAddrLen;
+    struct sockaddr_in echoClntAddr;        /* Client address */
+    
     /* Extract socket file descriptor from argument */
     clntSock = ((struct ThreadArgs *) threadArgs) -> clntSock;
     free(threadArgs);              /* Deallocate memory for argument */
