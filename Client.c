@@ -10,7 +10,7 @@ int sock;                               /* Socket descriptor */
 struct sockaddr_in echoServAddr;        /* Echo server address */
 struct info info;
 char *servIP;
-char getInfo[20] = "Get info!";
+char getInfo[20] = "GET_SYSTEM_INFO";
 
 void DieWithError(char *errorMessage);  /* Error handling function */
 void out(void);

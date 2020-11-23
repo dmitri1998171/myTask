@@ -75,7 +75,7 @@ void TCPWay(){
             /* Guarantees that thread resources are deallocated upon return */
             pthread_detach(pthread_self());  
             }
-            printf("with thread %ld\n", (long int) threadID);
+            // printf("with thread %ld\n", (long int) threadID);
         }
     }
 }
@@ -106,7 +106,7 @@ void UDPWay(){
 
             if (pthread_create(&threadID[i], NULL, ThreadMainUDP, (void *) threadArgs) != 0)
                 DieWithError("pthread_create() failed");
-            printf("with thread %ld\n", (long int) threadID);
+            // printf("with thread %ld\n", (long int) threadID);
 
             if(pthread_join(threadID[i], NULL) != 0) {
                 perror("Joining the second thread");
@@ -124,9 +124,19 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
+    // ==========================
+
     max_clnt = atoi(argv[1]);
     port = atoi(argv[2]);  
     type_proto = argv[3];
+
+    // --------------------------
+
+    if(port < 1024 || port > 65535){
+        printf("Invalid port");
+        exit(1);
+    }
+    // ==========================
 
     pthread_mutex_init(&mutex, NULL);
     threadID = (pthread_t*) malloc(max_clnt * sizeof(pthread_t));
@@ -150,23 +160,28 @@ void *ThreadMainTCP(void *threadArgs)
     clntSock = ((struct ThreadArgs *) threadArgs) -> clntSock;
     free(threadArgs);              /* Deallocate memory for argument */
 
-
     /* clntSock is connected to a client! */
     if ((recvMsgSize = recv(clntSock, echoBuffer, 32, 0)) < 0)
         DieWithError("recv() failed");
 
-    echoBuffer[recvMsgSize]='\0';
-    printf("recv: %s\n\n", echoBuffer);
+    // Проверка на получение правильной команды от клиента
+    if(strcmp(echoBuffer, "GET_SYSTEM_INFO") == 0){
+        echoBuffer[recvMsgSize]='\0';
+        printf("Recv: %s\n\n", echoBuffer);
 
-    pthread_mutex_lock(&mutex);
-    get_info();         // сбор информации
-    out();              // вывод на экран
+        pthread_mutex_lock(&mutex);
+        get_info();         // сбор информации
+        pthread_mutex_unlock(&mutex);
 
-    if (send(clntSock, &info, sizeof(info), 0) != sizeof(info))
-        DieWithError("send() sent a different number of bytes than expected");
-    printf("\n\n");
-    
-    pthread_mutex_unlock(&mutex);
+        if (send(clntSock, &info, sizeof(info), 0) != sizeof(info))
+            DieWithError("send() sent a different number of bytes than expected");
+        
+        out();              // вывод на экран
+        printf("\n\n");
+    }
+    else{
+        printf("ERROR! Recieved bad client command!\n");
+    }
 
     return (NULL);
 }
@@ -185,20 +200,24 @@ void *ThreadMainUDP(void *threadArgs)
         (struct sockaddr *) &echoClntAddr, &cliAddrLen)) < 0)
         DieWithError("recvfrom() failed");
 
-    printf("Handling client %s\n", inet_ntoa(echoClntAddr.sin_addr));
-    echoBuffer[recvMsgSize]='\0';
-    printf("Recv: %s\n\n", echoBuffer);
+    if(strcmp(echoBuffer, "GET_SYSTEM_INFO") == 0){
+        echoBuffer[recvMsgSize]='\0';
+        printf("Recv: %s\n\n", echoBuffer);
 
-    pthread_mutex_lock(&mutex);
-    get_info();         // сбор информации
+        pthread_mutex_lock(&mutex);
+        get_info();         // сбор информации
+        pthread_mutex_unlock(&mutex);
 
-    /* Send received datagram back to the client */
-    if (sendto(clntSock, &info, sizeof(info), 0, (struct sockaddr *) &echoClntAddr, sizeof(echoClntAddr)) != sizeof(info))
-        DieWithError("sendto() sent a different number of bytes than expected");
-    pthread_mutex_unlock(&mutex);
-
-    printf("\n\n");
-    out();              // вывод на экран
+        /* Send received datagram back to the client */
+        if (sendto(clntSock, &info, sizeof(info), 0, (struct sockaddr *) &echoClntAddr, sizeof(echoClntAddr)) != sizeof(info))
+            DieWithError("sendto() sent a different number of bytes than expected");
+    
+        out();              // вывод на экран
+        printf("\n\n");
+    }
+    else{
+        printf("ERROR! Recieved bad client command!\n");
+    }
 
     return (NULL);
 }
